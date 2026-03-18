@@ -1,0 +1,116 @@
+"ID","Title","Status","Priority","Milestone","Labels","Assignee","Created","Updated","Completed","URL","Description"
+"MER-279","Write unit tests for all logic classes","Done","High","Phase 1: Core Logic + Playable Prototype","Improvement","Mert Ertuğrul","2026-03-16T14:52:46.674Z","2026-03-17T08:35:34.643Z","2026-03-17T08:35:34.623Z","https://linear.app/mertyertugrul/issue/MER-279/write-unit-tests-for-all-logic-classes","Write comprehensive unit tests for all pure Dart logic classes. These have zero Flame dependency and are fast to test.
+
+`test/logic/road_graph_test.dart`: Graph construction, `segmentsAt`, `vehiclesOn`, `isRangeFree`, immutable updates (moveVehicle, removeVehicle, moveAmbulance).
+
+`test/logic/move_validator_test.dart`: Valid moves, boundary checks, collision detection, node crossing validation, blocked crossing.
+
+`test/logic/ambulance_ai_test.da… (truncated, use `get_issue` for full description)"
+"MER-277","Implement HealthBar (constant countdown + star calculation)","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:24.006Z","2026-03-17T08:31:10.837Z","2026-03-17T08:31:10.580Z","https://linear.app/mertyertugrul/issue/MER-277/implement-healthbar-constant-countdown-star-calculation","Implement `HealthBar` in `lib/logic/health_bar.dart`. Pure Dart.
+
+* `maxHealth` (seconds, from level JSON)
+* `remaining` getter, `fraction` getter (remaining/max)
+* `isDepleted` — uses `<= 0`, NOT `== 0`
+* `tick(deltaTime)` — called every game frame, clamps to \[0, maxHealth\]
+* `stars(thresholds)` — calculates star rating from remaining health fraction
+
+Health bar depletes at a **constant rate** regardless of ambulance state. Starts when level … (truncated, use `get_issue` for full description)"
+"MER-278","Implement LevelLoader (JSON parsing into full game state)","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:38.353Z","2026-03-17T08:18:37.615Z","2026-03-17T08:18:37.552Z","https://linear.app/mertyertugrul/issue/MER-278/implement-levelloader-json-parsing-into-full-game-state","Implement `LevelLoader` in `lib/logic/level_loader.dart`. Pure Dart.
+
+`load(Map<String, dynamic> json)` — Parses level JSON into a complete game state record:
+
+* `RoadGraph graph` (nodes, segments, vehicles, ambulance)
+* `HealthBar healthBar` (from `healthBar` field in seconds)
+* `Map<int, double> starThresholds` (3/2/1 star → health fraction)
+* `String levelName`, `String difficulty`
+
+Parsing:
+
+1. Parse `nodes` list → `Map<String, RoadNode>`
+2.… (truncated, use `get_issue` for full description)"
+"MER-276","Implement AmbulanceAI (BFS pathfinding + segment checks)","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:18.065Z","2026-03-17T07:52:40.864Z","2026-03-17T07:52:40.846Z","https://linear.app/mertyertugrul/issue/MER-276/implement-ambulanceai-bfs-pathfinding-segment-checks","Implement `AmbulanceAI` in `lib/logic/ambulance_ai.dart`. Pure Dart, zero Flame imports. Custom BFS — no external pathfinding package (they only support grids).
+
+`findPath(graph)` — EXPENSIVE: Full BFS from ambulance position to exit node. Returns ordered list of node IDs, or null. Only called when `_pathDirty` flag is set or at intersections.
+
+`canAdvanceNextSegment(graph)` — CHEAP: O(n) check where n = vehicles on next segment (0-3 typically).… (truncated, use `get_issue` for full description)"
+"MER-275","Implement MoveValidator (segment movement + node crossing)","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:16.313Z","2026-03-16T21:08:09.037Z","2026-03-16T21:08:09.008Z","https://linear.app/mertyertugrul/issue/MER-275/implement-movevalidator-segment-movement-node-crossing","Implement `MoveValidator` in `lib/logic/move_validator.dart`. Pure Dart, zero Flame imports.
+
+`validateMove(vehicle, delta, graph)`: Validates movement along current segment. Checks bounds (can't exceed segment capacity) and collisions with other vehicles + ambulance. Returns clamped delta (0 if impossible).
+
+`validateCrossing(vehicle, targetNodeId, targetSegmentId, graph)`: Validates crossing through a node to an adjacent segment. Determines en… (truncated, use `get_issue` for full description)"
+"MER-274","Implement RoadGraph with node/segment queries","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:14.584Z","2026-03-16T20:44:59.946Z","2026-03-16T20:44:59.932Z","https://linear.app/mertyertugrul/issue/MER-274/implement-roadgraph-with-nodesegment-queries","Implement `RoadGraph` in `lib/logic/road_graph.dart`. Pure Dart, zero Flame imports.
+
+**Fields**: `Map<String, RoadNode> nodes`, `Map<String, RoadSegment> segments`, `List<Vehicle> vehicles`, `Ambulance ambulance`.
+
+**Query methods**:
+
+* `segmentsAt(nodeId)` — all segments connected to a node
+* `vehiclesOn(segmentId)` — vehicles on a specific segment
+* `isRangeFree(segmentId, start, end)` — check if range is free (also checks ambulance)
+* `neigh… (truncated, use `get_issue` for full description)"
+"MER-273","Implement models: RoadNode, RoadSegment, Vehicle, Ambulance, IntendedDirection","Done","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:12.628Z","2026-03-16T20:44:59.005Z","2026-03-16T20:44:58.989Z","https://linear.app/mertyertugrul/issue/MER-273/implement-models-roadnode-roadsegment-vehicle-ambulance","Implement all core data models in `lib/models/`. All models extend `Equatable` for value equality.
+
+**RoadNode** (`models/road_node.dart`): `id`, `x`, `y` coordinates. Props by `id`.
+
+**RoadSegment** (`models/road_segment.dart`): `id`, `fromNodeId`, `toNodeId`, `capacity` (int, vehicle units that fit), optional `waypoints` for curved rendering. Includes `freeSpace()` method.
+
+**Vehicle** (`models/vehicle.dart`): `id`, `type` (car/truck), `sprite… (truncated, use `get_issue` for full description)"
+"MER-282","Implement phase transitions: planning → active","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:53:12.882Z","2026-03-16T19:16:37.773Z","","https://linear.app/mertyertugrul/issue/MER-282/implement-phase-transitions-planning-active","Implement `PhaseManager` in `lib/game/managers/phase_manager.dart` and integrate phase logic into `ClearAheadGame`.
+
+**Planning phase**: Ambulance is stationary (siren on). Player clears initial path. After every valid player move, call `AmbulanceAI.findPath()` (guarded by `_pathDirty` flag). If a valid path exists → transition to active phase.
+
+**Active phase**: Ambulance starts driving. Player keeps moving vehicles in real-time (no pause, no c… (truncated, use `get_issue` for full description)"
+"MER-281","Implement drag-to-move for non-ambulance vehicles","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:53:04.771Z","2026-03-16T19:16:36.473Z","","https://linear.app/mertyertugrul/issue/MER-281/implement-drag-to-move-for-non-ambulance-vehicles","Implement drag-to-move UX in `lib/game/components/drag_handler.dart` using Flame's `DragCallbacks` mixin.
+
+**Interaction flow**:
+
+1. Touch vehicle → highlight (subtle glow/scale-up)
+2. Drag → vehicle follows finger along current segment axis only. Constrained to segment direction. Snaps to unit boundaries.
+3. Release → snap to nearest whole-unit offset. If position changed, `moveCount++`.
+
+**MoveValidator integration**: Check continuously during… (truncated, use `get_issue` for full description)"
+"MER-280","Create ClearAheadGame rendering roads and vehicles as rectangles","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:55.595Z","2026-03-16T19:16:35.325Z","","https://linear.app/mertyertugrul/issue/MER-280/create-clearaheadgame-rendering-roads-and-vehicles-as-rectangles","Create `ClearAheadGame` (FlameGame subclass) in `lib/game/clear_ahead_game.dart`. This is the central game class that ties logic and rendering together.
+
+**Components to create**:
+
+* `RoadComponent` — renders road segments as filled rectangles between node positions. Straight segments = rectangle. Width = `worldScale * 0.8`. Color: dark gray.
+* `NodeComponent` — renders intersections as circles at node positions. Radius = `worldScale * 0.5`.
+* `… (truncated, use `get_issue` for full description)"
+"MER-285","Load hardcoded level and get end-to-end playable","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:53:38.169Z","2026-03-16T19:16:30.693Z","","https://linear.app/mertyertugrul/issue/MER-285/load-hardcoded-level-and-get-end-to-end-playable","Integration task: wire everything together so `level_001.json` is fully playable end-to-end.
+
+**Verify the complete loop works**:
+
+* Level loads from JSON via `LevelLoader`
+* Road network + vehicles render on screen (colored rectangles)
+* Player can drag non-ambulance vehicles along segments and through intersections
+* MoveValidator correctly blocks illegal moves
+* After clearing a path, ambulance starts driving autonomously
+* Ambulance accelera… (truncated, use `get_issue` for full description)"
+"MER-284","Implement auto-clear for passed vehicles","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:53:33.229Z","2026-03-16T19:16:28.985Z","","https://linear.app/mertyertugrul/issue/MER-284/implement-auto-clear-for-passed-vehicles","Implement `AutoClearManager` in `lib/game/managers/auto_clear_manager.dart` and `ClearAheadGame._tickAutoClear()`.
+
+**Logic**: Every frame during active phase, check each vehicle. When the ambulance has passed a vehicle by 2+ segments (measured along the ambulance's traveled path, not straight-line distance):
+
+1. **Immediately remove from RoadGraph** — `graph = graph.removeVehicle(vehicleId)`. The graph is the source of truth and must stay clean… (truncated, use `get_issue` for full description)"
+"MER-283","Implement autonomous ambulance movement with acceleration","Todo","High","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:53:20.703Z","2026-03-16T19:16:27.620Z","","https://linear.app/mertyertugrul/issue/MER-283/implement-autonomous-ambulance-movement-with-acceleration","Implement ambulance driving logic in `ClearAheadGame._tickAmbulance(dt)`.
+
+**Every frame during active phase**:
+
+1. Call `AmbulanceAI.canAdvanceNextSegment(graph)` (cheap O(n) check)
+2. If blocked → reset speed to base, wait
+3. If clear → advance ambulance by `speed * dt` units
+4. When ambulance crosses into a new segment → accelerate (speed += 0.3, capped at 8.0)
+5. When ambulance reaches exit node → `phase = GamePhase.won`
+
+**Movement mechanic… (truncated, use `get_issue` for full description)"
+"MER-272","Set up Flutter project with Flame and Phase 1 dependencies","Done","Urgent","Phase 1: Core Logic + Playable Prototype","Feature","Mert Ertuğrul","2026-03-16T14:52:10.244Z","2026-03-16T15:07:10.680Z","2026-03-16T15:07:10.667Z","https://linear.app/mertyertugrul/issue/MER-272/set-up-flutter-project-with-flame-and-phase-1-dependencies","Initialize Flutter project (`flutter create --org com.clearahead clear_ahead`) and add Phase 1 dependencies to `pubspec.yaml`:
+
+* `flame: ^1.21.0`
+* `flame_audio: ^2.10.0`
+* `shared_preferences: ^2.3.0`
+* `json_annotation: ^4.9.0`
+* `equatable: ^2.0.7`
+* `collection: ^1.18.0`
+
+Dev dependencies: `flutter_test`, `build_runner`, `json_serializable`, `mocktail`.
+
+Set up project structure: `lib/game/`, `lib/logic/`, `lib/models/`, `lib/screens/`, `li… (truncated, use `get_issue` for full description)"

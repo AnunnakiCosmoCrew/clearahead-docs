@@ -1,0 +1,30 @@
+{
+  "exportDate": "2026-03-18",
+  "project": "ClearAhead!",
+  "milestones": [
+    {
+      "name": "Phase 1: Core Logic + Playable Prototype",
+      "description": "Playable level with colored rectangles on a road network. No sprites, no polish — just working mechanics.",
+      "progress": 57.14,
+      "targetDate": "2026-03-25"
+    },
+    {
+      "name": "Phase 2: Visual Polish + Content",
+      "description": "Replace rectangles with real assets, add audio, create 20 levels. Game looks and sounds like a real product.",
+      "progress": 0,
+      "targetDate": "2026-04-01"
+    },
+    {
+      "name": "Phase 3: Monetization + Store Launch",
+      "description": "AdMob integration, Firebase Analytics, hint system, undo button, store assets, QA, and publish to Google Play.",
+      "progress": 0,
+      "targetDate": "2026-04-10"
+    },
+    {
+      "name": "Phase 4: Post-Launch Iteration",
+      "description": "Respond to data and feedback, expand content (30+ levels), story progression, vehicle variety, daily challenges.",
+      "progress": 0,
+      "targetDate": null
+    }
+  ]
+}
