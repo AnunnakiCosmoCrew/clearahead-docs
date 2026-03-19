@@ -6,6 +6,7 @@ This directory captures significant technical decisions for ClearAhead!
 |-----|----------|--------|------|
 | [001](001-flame-engine.md) | Use Flame engine for game rendering | Accepted | 2026-03-16 |
 | [002](002-immutable-road-graph.md) | Immutable road graph with pure logic layer | Accepted | 2026-03-16 |
+| [003](003-blender-art-pipeline.md) | Blender 3D render pipeline for art assets | Accepted | 2026-03-20 |
 
 ## How to add a new ADR
 

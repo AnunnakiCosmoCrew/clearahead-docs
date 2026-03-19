@@ -1,18 +1,20 @@
 {
-  "exportDate": "2026-03-18",
+  "exportDate": "2026-03-20",
   "project": "ClearAhead!",
   "milestones": [
     {
       "name": "Phase 1: Core Logic + Playable Prototype",
       "description": "Playable level with colored rectangles on a road network. No sprites, no polish — just working mechanics.",
-      "progress": 57.14,
-      "targetDate": "2026-03-25"
+      "progress": 100,
+      "targetDate": "2026-03-25",
+      "notes": "All core logic, rendering, isometric system, jelly polish, UI screens, save/load, and level design complete."
     },
     {
       "name": "Phase 2: Visual Polish + Content",
       "description": "Replace rectangles with real assets, add audio, create 20 levels. Game looks and sounds like a real product.",
-      "progress": 0,
-      "targetDate": "2026-04-01"
+      "progress": 5,
+      "targetDate": "2026-04-01",
+      "notes": "Art pipeline repo set up (#41 closed). Style guide drafted. Blender pipeline decided (ADR-003). Vehicle sprites (#43), road tiles (#44), environment (#45), and audio (#55-#58) remain."
     },
     {
       "name": "Phase 3: Monetization + Store Launch",
