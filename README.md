@@ -15,5 +15,8 @@ Project documentation and architecture decisions for [ClearAhead!](https://githu
 ### [Architecture Decision Records](adr/)
 Significant technical decisions with context, alternatives, and consequences.
 
+### [Level Design Guide](level-design.md)
+Level JSON schema, design principles, and iteration plan for multi-lane highway gameplay.
+
 ### [Data](data/)
 Linear issue exports and milestone tracking data.
