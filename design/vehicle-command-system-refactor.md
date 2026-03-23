@@ -180,7 +180,7 @@ When a vehicle is in `sirenAware` state and the player gives no command:
 
 | Difficulty | Behavior |
 |------------|----------|
-| Easier | After ~3 seconds, vehicle auto-yields (attempts basic lane change or forward move) |
+| No-brainer | After ~3 seconds, vehicle auto-yields (attempts basic lane change or forward move) |
 | Easy | After ~5 seconds, vehicle auto-yields |
 | Default | Vehicle stays in `sirenAware` indefinitely — **deadlock**. Player MUST handle every vehicle. |
 
