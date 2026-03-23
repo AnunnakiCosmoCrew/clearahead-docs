@@ -180,9 +180,9 @@ When a vehicle is in `sirenAware` state and the player gives no command:
 
 | Difficulty | Behavior |
 |------------|----------|
-| Easy | After ~3 seconds, vehicle auto-yields (attempts basic lane change or forward move) |
-| Medium | After ~5 seconds, vehicle auto-yields |
-| Hard | Vehicle stays in `sirenAware` indefinitely — **deadlock**. Player MUST handle every vehicle. |
+| Easier | After ~3 seconds, vehicle auto-yields (attempts basic lane change or forward move) |
+| Easy | After ~5 seconds, vehicle auto-yields |
+| Default | Vehicle stays in `sirenAware` indefinitely — **deadlock**. Player MUST handle every vehicle. |
 
 The auto-yield fallback reuses the existing cooperative AI logic (try lane change away from ambulance path, else move forward).
 
