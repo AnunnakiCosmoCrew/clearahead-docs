@@ -349,7 +349,7 @@ The logic layer **never** deals with Bézier curves or pixel positions. It only 
 | Car | 0.4s per unit distance | Nimble |
 | Truck | 0.7s per unit distance | Heavier, wider turning radius |
 
-During execution, the vehicle's collision bounds follow the curve — intermediate collision detection prevents clipping through other vehicles mid-maneuver.
+The target position is **reserved atomically in RoadGraph** when the maneuver begins — the Bézier curve is purely visual. No intermediate collision checks are needed because the logical state is always valid (see Section 9).
 
 ### Vehicle Rotation During Maneuver
 
@@ -419,68 +419,58 @@ When a vehicle reaches its destination node, it exits the graph:
 
 ---
 
-## 9. Universal Collision Detection
+## 9. Collision Prevention (Not Detection)
 
-### Current Problem
+### Philosophy
 
-Collision is special-cased:
-- `MoveValidator` checks vehicles vs vehicles (lane-aware)
-- `RoadGraph.isRangeFree` checks vehicles + ambulance + obstacles separately
-- Shoulder vehicles are skipped in main-lane checks
-- No collision between shoulder vehicles and lane vehicles (the overlap bug)
+Instead of building a separate collision detection system that reacts to overlaps after they happen, **collisions are prevented by design**. Vehicles can only move to validated, free positions — the game state can never contain overlapping objects.
 
-### New System
+This follows the principle: **if you can't reach an invalid state, you don't need to detect it.**
 
-All GameObjects participate in a unified collision system:
+### How It Works
 
-```dart
-class CollisionSystem {
-  /// Check if a target rect collides with any existing GameObject.
-  /// Respects segment topology (only checks objects on same/adjacent segments).
-  bool isPositionFree(
-    String segmentId,
-    int offset,
-    int length,
-    int lane,
-    bool onShoulder,
-    ShoulderSide? shoulderSide,
-    RoadGraph graph, {
-    String? excludeId,
-  });
-
-  /// Get all objects that would collide at a given position.
-  List<GameObject> findCollisions(
-    String segmentId,
-    int offset,
-    int length,
-    int lane,
-    bool onShoulder,
-    ShoulderSide? shoulderSide,
-    RoadGraph graph, {
-    String? excludeId,
-  });
-}
+```
+Vehicle wants to move
+  → CommandResolver / MoveValidator validates target is free
+  → Only moves if position is valid
+  → Collision is impossible
 ```
 
-### Collision Rules
+No separate `CollisionSystem` class. The validation logic lives in `MoveValidator` (extended to be comprehensive) and `CommandResolver` (for the new command system).
 
-| Object A | Object B | Collision? |
-|----------|----------|------------|
-| Vehicle (lane) | Vehicle (same lane) | Yes — blocked |
-| Vehicle (lane) | Vehicle (different lane) | No — lanes are separate |
-| Vehicle (lane) | Vehicle (shoulder, same side & overlapping offset) | Yes — physical overlap |
-| Vehicle (any) | Obstacle (same lane or all-lane) | Yes — blocked |
-| Vehicle (shoulder) | Obstacle (shoulder) | Yes — blocked |
-| Ambulance | Vehicle (same lane) | Yes — blocked |
-| Ambulance | Obstacle (same lane) | Yes — blocked |
+### Atomic Position Reservation
 
-### Intermediate Collision (During Maneuvers)
+When a vehicle starts executing a Bézier curve maneuver:
 
-While a vehicle is executing a Bézier curve maneuver, its collision bounds are checked at discrete intervals along the curve (every 0.1 parameter step). If a collision is detected mid-maneuver:
+1. **Target position is reserved in RoadGraph immediately** (before the animation starts)
+2. The curve animation is **purely visual** — the logical state is already valid
+3. No intermediate collision checks needed along the curve
+4. When animation finishes, the visual catches up to the already-valid logical state
 
-1. Vehicle stops at last collision-free position
-2. State remains `executing` but target is shortened
-3. Player can re-command after the shortened maneuver completes
+This means two vehicles can never logically overlap, even if their animations briefly cross paths visually. The graph is always in a valid state.
+
+### MoveValidator Responsibilities (Strengthened)
+
+The existing `MoveValidator` is expanded to be the single source of truth for "can this object be at this position":
+
+- Check against **all GameObjects** on the segment (vehicles, ambulance, static objects)
+- **Shoulder vs lane overlap** — a vehicle on a shoulder at offset N blocks a lane vehicle from occupying offset N if they physically overlap (fixes the current bug)
+- **Direction enforcement** — reject moves against segment direction
+- **Segment boundaries** — reject moves beyond capacity
+- **Obstacle awareness** — check both lane-specific and all-lane obstacles
+
+### Occupancy Rules
+
+| Position A | Position B | Can coexist? |
+|------------|------------|--------------|
+| Vehicle in lane 0 | Vehicle in lane 1 (same offset) | Yes — different lanes |
+| Vehicle in lane 0 | Vehicle in lane 0 (same offset) | No — same physical space |
+| Vehicle in lane | Vehicle on shoulder (overlapping offset) | No — physical overlap |
+| Vehicle anywhere | Obstacle (same lane or all-lane) | No — blocked |
+| Vehicle on shoulder | Obstacle on shoulder | No — blocked |
+| Ambulance in lane | Vehicle in same lane | No — blocked |
+
+These rules are enforced **before** any move is applied, not after.
 
 ---
 
@@ -526,15 +516,14 @@ Each phase is independently shippable and testable.
 **Scope:** Refactor models to use inheritance. Fix collision bugs.
 **ADR:** ADR-005
 
-- [ ] Create `GameObject` abstract base class with position, size, collision bounds
+- [ ] Create `GameObject` abstract base class with position, size, occupancy range
 - [ ] Create `Vehicle` abstract class extending GameObject
 - [ ] Refactor `Car`, `Truck` as Vehicle subclasses (extract from VehicleType enum)
 - [ ] Refactor `Ambulance` to extend Vehicle
 - [ ] Create `StaticObject` abstract class extending GameObject
 - [ ] Refactor `Obstacle` to extend StaticObject
-- [ ] Implement `CollisionSystem` with universal collision checks
-- [ ] Replace all special-cased collision code in MoveValidator and RoadGraph
-- [ ] **Fix:** Shoulder overlap bug (vehicles on shoulder collide with lane vehicles at same offset)
+- [ ] Strengthen `MoveValidator` to validate against all GameObjects (vehicles, ambulance, static objects) — single source of truth for "can this object be at this position"
+- [ ] **Fix:** Shoulder overlap bug (MoveValidator must check shoulder vehicles against lane positions at overlapping offsets)
 - [ ] **Fix:** Opposite direction movement (enforce segment direction in MoveValidator)
 - [ ] Update RoadGraph to work with new type hierarchy
 - [ ] Update all tests
@@ -602,8 +591,7 @@ Each phase is independently shippable and testable.
 - [ ] Control point calculation for different maneuver types (lane change, shoulder, forward, diagonal)
 - [ ] Vehicle sprite follows curve tangent (rotation)
 - [ ] Duration varies by vehicle type (truck 1.75x slower)
-- [ ] Intermediate collision detection along curve
-- [ ] Vehicle stops at last safe position if collision detected mid-curve
+- [ ] Atomic position reservation: target claimed in RoadGraph before animation starts; curve is purely visual
 - [ ] State transition: executing → waiting on completion
 - [ ] Camera follows maneuver smoothly
 - [ ] Update tests
@@ -650,7 +638,6 @@ Each phase maintains backward compatibility with existing level JSON:
 | Bézier maneuvers feel sluggish | Tune duration constants; allow cancellation |
 | Siren radius too small/large | Make it a tuning constant; adjust per difficulty |
 | Tap+swipe less intuitive than drag | Phase 4 is self-contained; can A/B test or revert |
-| Universal collision too expensive | Spatial partitioning by segment (already natural) |
 | Route recalculation cascade | Dirty flag + timer batching (same pattern as ambulance BFS) |
 
 ---

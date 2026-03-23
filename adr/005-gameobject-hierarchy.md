@@ -43,22 +43,19 @@ Shared behaviors are expressed as mixins:
 - `Movable` — speed, route, route recalculation
 - `Commandable` — state machine, receiving/executing player commands
 
-A new `CollisionSystem` class provides universal collision detection:
+Collisions are **prevented by design, not detected after the fact**. Rather than building a separate `CollisionSystem` that reacts to overlaps, the `MoveValidator` is strengthened to validate against ALL GameObjects before any move is applied. If you can't reach an invalid state, you don't need to detect it.
 
-```dart
-class CollisionSystem {
-  bool isPositionFree(segmentId, offset, length, lane, onShoulder, graph, {excludeId});
-  List<GameObject> findCollisions(segmentId, offset, length, lane, onShoulder, graph, {excludeId});
-}
-```
+`MoveValidator` becomes the single source of truth for "can this object be at this position":
+- Validates against all vehicles, the ambulance, and all static objects on the segment
+- Checks shoulder vs lane physical overlap (fixes the overlap bug)
+- Enforces segment direction constraints
+- For Bézier curve maneuvers: the target position is reserved atomically in RoadGraph before the animation starts — the curve is purely visual
 
-This replaces the scattered collision logic across MoveValidator, RoadGraph, and AmbulanceAI.
-
-### Key collision rules
-- Same lane, overlapping offset → collision
-- Different lanes, same offset → no collision
-- Lane vehicle overlapping with shoulder vehicle at same offset → **collision** (fixes the bug)
-- Any vehicle vs obstacle at same lane/offset → collision
+### Key occupancy rules
+- Same lane, overlapping offset → blocked (cannot move there)
+- Different lanes, same offset → allowed (lanes are separate)
+- Lane vehicle at offset N, shoulder vehicle at offset N → blocked (physical overlap)
+- Any vehicle vs obstacle at same lane/offset → blocked
 
 ### Immutability preserved
 All model classes remain immutable (extend Equatable, return new instances on mutation). The hierarchy adds shared structure, not shared mutable state.
@@ -75,10 +72,10 @@ All model classes remain immutable (extend Equatable, return new instances on mu
 
 ### What becomes easier
 
-- **Universal collision detection** — one system handles all object pairs, fixing the shoulder overlap bug and preventing future collision gaps
-- **Adding new object types** — just extend `StaticObject` or `Vehicle`, collision system works automatically
+- **Collision prevention by design** — MoveValidator checks all GameObjects, fixing the shoulder overlap bug. Invalid states are impossible, not just detected.
+- **Adding new object types** — just extend `StaticObject` or `Vehicle`; MoveValidator handles them through the GameObject abstraction automatically
 - **Polymorphic handling** — methods can accept `GameObject` and work with any type (rendering, serialization, graph queries)
-- **Testing** — collision rules tested once in CollisionSystem, not scattered across 5 files
+- **Testing** — occupancy rules tested once in MoveValidator, not scattered across 5 files
 
 ### What becomes harder
 
