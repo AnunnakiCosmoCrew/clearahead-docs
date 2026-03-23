@@ -251,18 +251,18 @@ The current drag system (DragCallbacks on ClearAheadGame) is replaced with a two
 
 ### Swipe Direction Mapping
 
-The swipe vector is decomposed relative to the vehicle's current segment direction:
+The swipe vector is decomposed relative to the vehicle's current segment direction. **Pure perpendicular (left/right) commands are excluded** — real vehicles can only change lateral position by steering while moving forward or backward (only front wheels turn). All lateral movement is a diagonal arc.
 
 | Swipe | Command | Meaning |
 |-------|---------|---------|
 | Along segment (forward) | `forward` | Move forward on segment |
-| Along segment (backward) | `backward` | Move backward on segment |
-| Perpendicular (left) | `left` | Lane change left / shoulder left / median cross |
-| Perpendicular (right) | `right` | Lane change right / shoulder right / median cross |
-| Diagonal (forward-right) | `forwardRight` | Curve maneuver: move forward + shift right |
-| Diagonal (forward-left) | `forwardLeft` | Curve maneuver: move forward + shift left |
-| Diagonal (backward-right) | `backwardRight` | Curve maneuver: move backward + shift right |
-| Diagonal (backward-left) | `backwardLeft` | Curve maneuver: move backward + shift left |
+| Along segment (backward) | `backward` | Reverse on segment |
+| Diagonal (forward-right) | `forwardRight` | Lane change right, shoulder pull-off, median crossing (forward arc) |
+| Diagonal (forward-left) | `forwardLeft` | Lane change left, shoulder pull-off, median crossing (forward arc) |
+| Diagonal (backward-right) | `backwardRight` | Back into shoulder/lane (reverse arc) |
+| Diagonal (backward-left) | `backwardLeft` | Back into shoulder/lane (reverse arc) |
+
+This gives **6 directions** with 60° angular zones each, providing generous hit targets on phone screens.
 
 ### Swipe Magnitude
 
@@ -310,16 +310,26 @@ All vehicle maneuvers follow a **cubic Bézier curve** from start to end positio
 Start: (x₀, y₀) — current world position
 End:   (x₃, y₃) — target world position
 
-For a lane change (lateral move):
-  P0 = (x₀, y₀)          — start
-  P1 = (x₀ + dx*0.3, y₀) — front of car starts turning
-  P2 = (x₃ - dx*0.3, y₃) — car aligns with target lane
-  P3 = (x₃, y₃)          — end
+All lateral movement is diagonal (forward+lateral or backward+lateral),
+since real vehicles can only steer while moving. There is no pure
+sideways maneuver — even a "lane change" requires forward motion.
 
-For a diagonal move (forward + lateral):
+For a lane change (forward + lateral arc):
+  P0 = (x₀, y₀)                      — start
+  P1 = (x₀ + dx*0.4, y₀ + dy*0.1)   — front wheels turn, car begins arc
+  P2 = (x₃ - dx*0.4, y₃ - dy*0.1)   — car aligns with target lane
+  P3 = (x₃, y₃)                      — end
+
+For a shoulder pull-off (forward + lateral arc, tighter curve):
   P0 = (x₀, y₀)
-  P1 = (x₀ + dx*0.4, y₀ + dy*0.1)  — gentle initial turn
-  P2 = (x₃ - dx*0.4, y₃ - dy*0.1)  — aligning with target
+  P1 = (x₀ + dx*0.3, y₀ + dy*0.15)  — sharper initial turn toward shoulder
+  P2 = (x₃ - dx*0.3, y₃ - dy*0.15)  — aligning with shoulder
+  P3 = (x₃, y₃)
+
+For a pure forward/backward move (straight line):
+  P0 = (x₀, y₀)
+  P1 = lerp(P0, P3, 0.33)            — straight interpolation
+  P2 = lerp(P0, P3, 0.66)
   P3 = (x₃, y₃)
 ```
 

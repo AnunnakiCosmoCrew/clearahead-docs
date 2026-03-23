@@ -27,7 +27,8 @@ Replace drag-and-snap with a **two-step tap+swipe command system**:
 
 ### Step 2: Swipe to Command
 - Player swipes in a direction from the selected vehicle
-- Swipe vector is decomposed relative to the segment direction into 8 directions: forward, backward, left, right, and 4 diagonals
+- Swipe vector is decomposed relative to the segment direction into **6 directions**: forward, backward, and 4 diagonals (forward-left, forward-right, backward-left, backward-right)
+- **Pure perpendicular (left/right) is excluded** — real vehicles cannot move sideways; only front wheels steer, so any lateral movement requires forward or backward motion (a diagonal arc)
 - Swipe magnitude maps to movement distance: short (1 unit), medium (2-3 units), long (max valid)
 - The game resolves the command to the furthest valid target position in that direction (collision-free, within bounds)
 - Vehicle transitions to `executing` state and performs a Bézier curve maneuver to the target
@@ -39,6 +40,14 @@ Replace drag-and-snap with a **two-step tap+swipe command system**:
 
 ### Direction Decomposition
 The swipe vector is rotated by the negative of the segment angle so that "forward along segment" maps to the forward command regardless of screen orientation. This ensures intuitive controls on curved roads.
+
+With 6 directions (instead of 8), each angular zone is 60° wide, providing generous hit targets on small phone screens. The zones are:
+- Forward: -30° to +30° relative to segment direction
+- Forward-right: +30° to +90°
+- Backward-right: +90° to +150°
+- Backward: +150° to -150° (wraps)
+- Backward-left: -150° to -90°
+- Forward-left: -90° to -30°
 
 ### Bézier Curve Execution
 Once a command resolves to a target position, the vehicle follows a cubic Bézier curve:
@@ -69,12 +78,12 @@ The logic layer never touches pixel coordinates or curves.
 
 - **Dispatcher feel** — player commands, vehicles execute. Matches the helicopter dispatcher fantasy.
 - **Realistic movement** — Bézier curves look natural; vehicles turn rather than slide
-- **Multi-directional commands** — diagonal swipes enable forward+lateral maneuvers in a single command
+- **Realistic 6-direction commands** — all lateral movement is diagonal (forward+lateral arc), matching real vehicle physics. No unrealistic pure-sideways slides.
 - **Difficulty scaling** — the command system works identically across difficulties; only the auto-yield fallback changes
 
 ### What becomes harder
 
 - **Discoverability** — new players need to learn tap+swipe. Mitigated by tutorial levels that introduce the mechanic step-by-step.
-- **Precision on small screens** — swipe direction must be clearly distinguished (8 directions). Mitigated by generous angle thresholds (45° per direction).
+- **Precision on small screens** — swipe direction must be clearly distinguished (6 directions). Mitigated by generous 60° angle zones per direction.
 - **Testing** — gesture recognition needs careful testing with varied swipe angles and speeds. Mitigated by unit-testable CommandResolver (pure Dart, no gesture dependency).
 - **A/B testing risk** — if tap+swipe doesn't feel good, we need to revert or iterate. Mitigated by implementing this as a self-contained phase; drag code can be feature-flagged during testing.
