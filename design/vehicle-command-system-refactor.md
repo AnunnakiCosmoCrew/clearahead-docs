@@ -37,6 +37,8 @@ This is the single biggest gameplay pivot since the move from grid to graph topo
 | Route system | Fixed VehicleRoute (segment list) | Destination-based with dynamic pathfinding |
 | Siren | Visual/audio only | Core game mechanic with activation radius |
 | No-input behavior | N/A | Difficulty-dependent (easy: auto-yield; hard: deadlock) |
+| Lane positioning | Integer lanes only (0 or 1) | Hybrid: integer lane + continuous lateralOffset for partial shifting |
+| Zipper merge | Not possible | Vehicles shift within lanes, ambulance straddles the gap |
 
 ---
 
@@ -240,7 +242,79 @@ Siren detection runs on a **0.5s timer** (not every frame). It maintains a set o
 
 ---
 
-## 6. Command Input System (ADR-006)
+## 6. Zipper Merge Mechanic (ADR-009)
+
+### Concept
+
+In real traffic, vehicles on both sides of the road shift partially toward their edges when an ambulance approaches — left lane cars shift left, right lane cars shift right. This opens a corridor down the middle for the ambulance to drive through, straddling both lanes. The road opens like a zipper.
+
+### Lateral Offset Model
+
+A `double lateralOffset` field (-0.5 to +0.5) is added to both Vehicle and Ambulance:
+
+```
+lateralOffset = -0.5  →  fully shifted left (toward median/edge)
+lateralOffset =  0.0  →  centered in lane (default)
+lateralOffset = +0.5  →  fully shifted right (toward shoulder/edge)
+```
+
+The integer `lane` stays as the primary lane assignment. `lateralOffset` adjusts the physical position within that lane.
+
+### Collision with Lateral Offset
+
+A vehicle with |lateralOffset| > 0.3 partially occupies the adjacent lane:
+
+| Vehicle position | Blocks |
+|-----------------|--------|
+| lane 0, offset 0.0 | lane 0 only |
+| lane 0, offset +0.4 | lane 0 AND partially lane 1 |
+| lane 1, offset -0.4 | lane 1 AND partially lane 0 |
+
+### Ambulance Straddling
+
+When vehicles on both sides are shifted (|lateralOffset| ≥ 0.3), the ambulance can straddle:
+
+```
+Lane 0:  [car shifted left ←]     gap     [car shifted right →]  :Lane 1
+                              ↑ ambulance ↑
+                         (lateralOffset = 0.5, straddling)
+```
+
+The ambulance AI automatically detects straddling opportunities — it checks if both adjacent lanes have vehicles shifted enough to create a passable gap.
+
+### Player Input (Drag-Based)
+
+Using the existing drag system with two thresholds:
+
+| Lateral drag | Action |
+|-------------|--------|
+| 5-20px | **Partial shift** within lane (lateralOffset changes by ~0.3-0.4) |
+| >20px | **Full lane change** (existing behavior) |
+
+The player touches a car and nudges it gently sideways to shift it within its lane.
+
+### Difficulty-Based Auto-Shift
+
+| Difficulty | Behavior |
+|------------|----------|
+| No-brainer | Vehicles in siren range auto-shift to create zipper corridor |
+| Easy | Vehicles auto-shift after ~3 seconds |
+| Default | Player must manually shift each vehicle |
+
+### Rendering
+
+```dart
+final laneCenterOffset = lanePerpendicularOffset(vehicle.lane, segment.lanes);
+final laneWidth = worldScale * 0.7;
+final totalOffset = laneCenterOffset + (vehicle.lateralOffset * laneWidth);
+position += perpDir * totalOffset;
+```
+
+Vehicles smoothly slide within their lane. The ambulance renders between lanes when straddling.
+
+---
+
+## 7. Command Input System (ADR-006)
 
 ### Replacing Drag with Tap+Swipe
 
@@ -294,7 +368,7 @@ When a command is issued:
 
 ---
 
-## 7. Realistic Vehicle Movement — Bézier Curves
+## 8. Realistic Vehicle Movement — Bézier Curves
 
 ### The Problem
 
@@ -366,7 +440,7 @@ This makes the car visually "turn" through the maneuver — front swings first, 
 
 ---
 
-## 8. Dynamic Route Calculation (ADR-008)
+## 9. Dynamic Route Calculation (ADR-008)
 
 ### Current System
 
@@ -419,7 +493,7 @@ When a vehicle reaches its destination node, it exits the graph:
 
 ---
 
-## 9. Collision Prevention (Not Detection)
+## 10. Collision Prevention (Not Detection)
 
 ### Philosophy
 
@@ -474,7 +548,7 @@ These rules are enforced **before** any move is applied, not after.
 
 ---
 
-## 10. Rule Changes
+## 11. Rule Changes
 
 ### Trucks on Shoulders
 
@@ -507,7 +581,7 @@ These rules are enforced **before** any move is applied, not after.
 
 ---
 
-## 11. Implementation Phases
+## 12. Implementation Phases
 
 Each phase is independently shippable and testable.
 
@@ -564,7 +638,27 @@ Each phase is independently shippable and testable.
 
 **Files changed:** `lib/models/vehicle_state.dart` (new), `lib/logic/siren_radius.dart` (new), `lib/logic/traffic_ai.dart`, `lib/game/clear_ahead_game.dart`
 
-### Phase 4: Command Input System (Tap+Swipe)
+### Phase 4: Zipper Merge — Lateral Offset & Ambulance Straddling
+
+**Scope:** Add partial lateral shifting within lanes and ambulance straddling for zipper corridor.
+**ADR:** ADR-009
+
+- [ ] Add `lateralOffset: double` field to Vehicle (default 0.0, range -0.5 to +0.5)
+- [ ] Add `lateralOffset: double` field to Ambulance
+- [ ] Update `copyWith` / `moveTo` patterns to thread `lateralOffset`
+- [ ] Update `isRangeFree` to use `vehicleBlocksLane()` — partial lane occupation based on lateralOffset (threshold: |offset| > 0.3 blocks adjacent lane)
+- [ ] Update `AmbulanceAI` to detect straddling opportunities (both adjacent lanes have shifted vehicles)
+- [ ] Ambulance straddling mode: `lateralOffset = 0.5` when gap detected between shifted vehicles
+- [ ] Input: small lateral drag (5-20px) triggers partial shift within lane; large drag (>20px) triggers full lane change (existing behavior)
+- [ ] Difficulty-based auto-shift: vehicles auto-shift on easier difficulties when siren reaches them
+- [ ] Rendering: vehicle position includes `lateralOffset * laneWidth` in perpendicular offset calculation
+- [ ] Ambulance rendering: position between lanes when straddling
+- [ ] Update collision tests for partial lane occupation
+- [ ] Create zipper-specific test suite
+
+**Files changed:** `lib/models/vehicle.dart`, `lib/models/ambulance.dart`, `lib/models/car.dart`, `lib/models/truck.dart`, `lib/logic/road_graph.dart`, `lib/logic/ambulance_ai.dart`, `lib/logic/move_validator.dart`, `lib/game/components/vehicle_component.dart`, `lib/game/components/ambulance_component.dart`, `lib/game/rendering_utils.dart`
+
+### Phase 5: Command Input System (Tap+Swipe)
 
 **Scope:** Replace drag with tap+swipe directional commands.
 **ADR:** ADR-006
@@ -583,7 +677,7 @@ Each phase is independently shippable and testable.
 
 **Files changed:** `lib/game/clear_ahead_game.dart`, `lib/game/components/vehicle_component.dart`, `lib/logic/command_resolver.dart` (new), `lib/models/maneuver_plan.dart` (new)
 
-### Phase 5: Realistic Movement — Bézier Curves
+### Phase 6: Realistic Movement — Bézier Curves
 
 **Scope:** Vehicles execute commands with curved, animated maneuvers.
 
@@ -598,7 +692,7 @@ Each phase is independently shippable and testable.
 
 **Files changed:** `lib/game/effects/bezier_maneuver.dart` (new), `lib/game/components/vehicle_component.dart`, `lib/game/rendering_utils.dart`
 
-### Phase 6: Rule Relaxation & Polish
+### Phase 7: Rule Relaxation & Polish
 
 **Scope:** Enable trucks on shoulders/median. Shoulder longitudinal movement. Direction enforcement.
 
@@ -613,7 +707,7 @@ Each phase is independently shippable and testable.
 
 ---
 
-## 12. Migration Strategy
+## 13. Migration Strategy
 
 ### Backward Compatibility
 
@@ -642,7 +736,7 @@ Each phase maintains backward compatibility with existing level JSON:
 
 ---
 
-## 13. Open Questions
+## 14. Open Questions
 
 1. **Siren radius visual:** Should the player see the siren cone on screen? A subtle overlay could help them understand which vehicles they can command.
 2. **Multiple selections:** Can the player command multiple vehicles simultaneously, or one at a time?
