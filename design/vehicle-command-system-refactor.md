@@ -420,7 +420,7 @@ The logic layer **never** deals with Bézier curves or pixel positions. It only 
 
 | Vehicle | Base duration | Notes |
 |---------|--------------|-------|
-| Car | 0.4s per unit distance | Nimble |
+| Car | 0.55s per unit distance | Nimble (tuned from 0.4s after device testing) |
 | Truck | 0.7s per unit distance | Heavier, wider turning radius |
 
 The target position is **reserved atomically in RoadGraph** when the maneuver begins — the Bézier curve is purely visual. No intermediate collision checks are needed because the logical state is always valid (see Section 9).

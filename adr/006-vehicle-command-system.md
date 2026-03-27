@@ -53,7 +53,7 @@ With 6 directions (instead of 8), each angular zone is 60° wide, providing gene
 Once a command resolves to a target position, the vehicle follows a cubic Bézier curve:
 - Control points create a natural arc (car turns into the maneuver)
 - Vehicle sprite rotates to follow the curve tangent
-- Duration: cars 0.4s/unit, trucks 0.7s/unit
+- Duration: cars 0.55s/unit (tuned from 0.4s), trucks 0.7s/unit
 - Intermediate collision detection prevents clipping through objects mid-maneuver
 
 ### Architecture Split
